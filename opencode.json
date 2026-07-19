@@ -1,0 +1,12 @@
+{
+    "$schema": "https://opencode.ai/config.json",
+    "default_agent": "orquestrador",
+    "model": "opencode/big-pickle",
+    "small_model": "opencode/deepseek-v4-flash-free",
+    "plugin": [
+        "superpowers@git+https://github.com/obra/superpowers.git"
+    ],
+    "skills": {
+        "paths": [".opencode/skills"]
+    }
+}

@@ -1,0 +1,5 @@
+# Projeto sem dependencias npm — todas as bibliotecas via CDN
+node_modules
+package.json
+package-lock.json
+bun.lock

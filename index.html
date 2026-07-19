@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF Editor</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet" />
+  <!-- Bibliotecas Externas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <a href="#" class="logo" id="logoLink">PDF Editor</a>
+    <div class="header-right">
+      <button class="btn btn-primary btn-sm" id="headerExportBtn" style="display:none">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" y1="15" x2="12" y2="3" />
+        </svg>
+        Exportar
+      </button>
+      <div class="undo-group" id="undoGroup" style="display:none">
+        <button class="btn btn-icon" id="undoBtn" title="Desfazer (Ctrl+Z)" disabled>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="1 4 1 10 7 10" />
+            <path d="M3.51 15a9 9 0 1 0 .49-4.38" />
+          </svg>
+        </button>
+        <button class="btn btn-icon" id="redoBtn" title="Refazer (Ctrl+Y)" disabled>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="23 4 23 10 17 10" />
+            <path d="M20.49 15a9 9 0 1 1-.49-4.38" />
+          </svg>
+        </button>
+      </div>
+      <button class="btn btn-secondary btn-sm" id="themeToggleBtn" title="Alternar tema">
+        <svg id="icoMoon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2.5">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+        </svg>
+        <svg id="icoSun" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+          style="display:none">
+          <circle cx="12" cy="12" r="5" />
+          <line x1="12" y1="1" x2="12" y2="3" />
+          <line x1="12" y1="21" x2="12" y2="23" />
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+          <line x1="1" y1="12" x2="3" y2="12" />
+          <line x1="21" y1="12" x2="23" y2="12" />
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+        </svg>
+        Tema
+      </button>
+      <button class="btn btn-secondary btn-sm" id="resetBtn" style="display:none">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <path d="M19 6l-1 14H6L5 6" />
+          <path d="M9 6V4h6v2" />
+        </svg>
+        Limpar
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <!-- DROPZONE -->
+    <div id="dropzone">
+      <h2>Solte seus arquivos aqui</h2>
+      <p>Arraste PDFs e imagens, ou clique para selecionar</p>
+      <div class="dz-formats"><span class="dz-fmt">PDF</span><span class="dz-fmt">JPG</span><span
+          class="dz-fmt">PNG</span><span class="dz-fmt">WEBP</span><span class="dz-fmt">GIF</span></div>
+      <button class="btn btn-primary dz-add-btn" id="dzAddBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+        </svg>
+        Adicionar Arquivos
+      </button>
+      <input type="file" id="fileInput" accept=".pdf,image/jpeg,image/png,image/webp,image/gif" multiple />
+    </div>
+
+    <!-- EDITOR -->
+    <div id="editorView">
+      <div id="toolBar">
+        <div class="tb-left">
+          <button class="btn btn-secondary btn-sm" id="tbAddBtn">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Adicionar
+          </button>
+          <input type="file" id="addMoreInput" accept=".pdf,image/jpeg,image/png,image/webp,image/gif" multiple
+            style="display:none" />
+          <span class="stat-pill" id="pagesStat">0 páginas</span>
+          <span class="stat-pill" style="color:var(--accent);border-color:var(--accent-b);background:var(--accent-lite)"
+            id="topSizeEst">Tamanho: ~0 KB</span>
+        </div>
+        <div class="tb-right">
+          <!-- Grid zoom -->
+          <div class="zoom-slider-wrap" title="Tamanho das miniaturas">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
+            </svg>
+            <input type="range" id="gridZoomSlider" min="100" max="280" value="146" step="10"
+              title="Zoom das miniaturas" />
+          </div>
+          <!-- View toggle -->
+          <div class="view-toggle">
+            <button class="vt-btn active" id="vtGrid" title="Visualização em grid">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <rect x="3" y="3" width="7" height="7" />
+                <rect x="14" y="3" width="7" height="7" />
+                <rect x="3" y="14" width="7" height="7" />
+                <rect x="14" y="14" width="7" height="7" />
+              </svg>
+            </button>
+            <button class="vt-btn" id="vtList" title="Visualização em lista">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="8" y1="6" x2="21" y2="6" />
+                <line x1="8" y1="12" x2="21" y2="12" />
+                <line x1="8" y1="18" x2="21" y2="18" />
+                <line x1="3" y1="6" x2="3.01" y2="6" />
+                <line x1="3" y1="12" x2="3.01" y2="12" />
+                <line x1="3" y1="18" x2="3.01" y2="18" />
+              </svg>
+            </button>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="selAllBtn">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <polyline points="9 12 11 14 15 10" />
+            </svg>
+            <span id="selAllTxt">Selecionar todas</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Barra de Exportação Fila -->
+      <div id="exportSettingsBar">
+        <div class="es-group" style="flex:1">
+          <label>Nome do Arquivo:</label>
+          <div class="export-filename-wrap">
+            <input type="text" id="exportFilename" />
+            <span class="ext-badge">.pdf</span>
+          </div>
+        </div>
+        <div class="es-group">
+          <label>Modo de Saída:</label>
+          <select id="exportMode">
+            <option value="create">PDF Único</option>
+            <option value="split">Dividir (1 por pág.)</option>
+          </select>
+        </div>
+        <div class="es-group">
+          <label>Compressão:</label>
+          <select id="exportComp">
+            <option value="original">Original</option>
+            <option value="basic">Básico</option>
+            <option value="medium">Médio</option>
+            <option value="high">Alto</option>
+            <option value="extreme">Extrema</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="selBar">
+        <span class="sel-label" id="selLabel">0 selecionadas</span>
+        <div class="sdiv"></div>
+        <button class="btn btn-ghost btn-sm" id="selRotLeftBtn" title="↺">↺ Girar</button>
+        <button class="btn btn-ghost btn-sm" id="selRotRightBtn" title="↻">↻ Girar</button>
+        <button class="btn btn-ghost btn-sm" id="selDupBtn">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <rect x="9" y="9" width="13" height="13" rx="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
+          Duplicar
+        </button>
+        <div class="sdiv"></div>
+        <div class="dim-batch-wrap">
+          <label>W:</label>
+          <input type="number" id="batchW" placeholder="px" min="10" max="9999" />
+          <button class="btn btn-xs btn-secondary" id="batchApplyBtn">OK</button>
+          <button class="btn btn-xs btn-ghost" id="batchResetBtn">↺</button>
+        </div>
+        <div class="sdiv"></div>
+        <button class="btn btn-danger btn-sm" id="selDelBtn">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6l-1 14H6L5 6" />
+            <path d="M9 6V4h6v2" />
+          </svg>
+          Excluir
+        </button>
+        <button class="btn btn-ghost btn-sm" id="selClearBtn" style="margin-left:auto">✕</button>
+      </div>
+
+      <div id="pagesGrid"></div>
+    </div>
+  </main>
+
+  <div id="editorDropHint">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="17 8 12 3 7 8" />
+      <line x1="12" y1="3" x2="12" y2="15" />
+    </svg>
+    Solte para adicionar
+  </div>
+
+  <!-- LIGHTBOX -->
+  <div id="lightbox">
+    <div class="lb-head">
+      <div class="lb-title" id="lbTitle">—</div>
+      <div class="lb-head-right">
+        <span class="lb-nav-info" id="lbNavInfo"></span>
+        <button class="btn btn-ghost btn-sm" id="lbSelBtn">Selecionar</button>
+        <button class="btn btn-icon btn-ghost" id="lbCloseBtn" title="Esc">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="lb-body" id="lbBodyContainer">
+      <button class="lb-arrow prev" id="lbPrev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.5">
+          <polyline points="15 18 9 12 15 6" />
+        </svg></button>
+
+      <!-- Wrapper para aplicar Zoom e Pan sem interferir na rotação -->
+      <div class="lb-transform-wrap" id="lbTransformWrap">
+        <div class="lb-img-wrap"><canvas id="lbCanvas"></canvas></div>
+      </div>
+
+      <button class="lb-arrow next" id="lbNext"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2.5">
+          <polyline points="9 18 15 12 9 6" />
+        </svg></button>
+    </div>
+    <div class="lb-toolbar">
+      <button class="btn btn-secondary btn-sm" id="lbRotLeftBtn">↺ Girar</button>
+      <button class="btn btn-secondary btn-sm" id="lbRotRightBtn">↻ Girar</button>
+      <button class="btn btn-secondary btn-sm" id="lbDupBtn">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <rect x="9" y="9" width="13" height="13" rx="2" />
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+        </svg>
+        Duplicar
+      </button>
+      <button class="btn btn-amber btn-sm" id="lbCropBtn">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="6 2 3 2 3 22" />
+          <polyline points="18 22 21 22 21 2" />
+          <line x1="3" y1="8" x2="21" y2="8" />
+          <line x1="3" y1="16" x2="21" y2="16" />
+        </svg>
+        Recortar
+      </button>
+      <div class="lb-divider"></div>
+      <div class="lb-dim-wrap">
+        <label>W</label>
+        <input type="number" id="lbDimW" class="lb-dim-w" placeholder="auto" min="10" max="9999" />
+        <span class="lock-icon"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2.5">
+            <rect x="3" y="11" width="18" height="11" rx="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg></span>
+        <input type="number" id="lbDimH" class="lb-dim-h" placeholder="auto" min="10" max="9999" readonly
+          tabindex="-1" />
+        <span id="lbDimUnit" style="font-size:10px;color:var(--muted);padding-right:3px">px</span>
+        <button class="btn btn-xs btn-secondary" id="lbApplyDimBtn">OK</button>
+        <button class="btn btn-xs btn-ghost" id="lbResetDimBtn">↺</button>
+      </div>
+      <div class="lb-divider"></div>
+      <button class="btn btn-danger btn-sm" id="lbDelBtn">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="3 6 5 6 21 6" />
+          <path d="M19 6l-1 14H6L5 6" />
+          <path d="M9 6V4h6v2" />
+        </svg>
+        Excluir
+      </button>
+    </div>
+  </div>
+
+  <!-- CROP MODAL -->
+  <div id="cropModal">
+    <div class="lb-head">
+      <div class="lb-title" id="cropTitle">Recortar</div>
+      <div class="lb-head-right">
+        <span style="font-size:11px;color:var(--muted)">Arraste para definir a área de recorte</span>
+        <button class="btn btn-icon btn-ghost" id="cropCloseBtn" title="Cancelar (Esc)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="crop-body">
+      <div
+        style="position: relative; display: flex; align-items: center; justify-content: center; max-width: 100%; max-height: 100%;">
+        <canvas id="cropImageCanvas"
+          style="display: block; max-width: 100%; max-height: 100%; border-radius: 4px; box-shadow: 0 4px 24px rgba(0,0,0,0.15);"></canvas>
+        <canvas id="cropCanvas"
+          style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; cursor: crosshair; border-radius: 4px;"></canvas>
+      </div>
+    </div>
+    <div class="crop-toolbar">
+      <div class="crop-coords">
+        <span style="font-size:11px;color:var(--muted)">Área:</span>
+        <div class="crop-coord-field"><label>X</label><input type="number" id="cropX" min="0" /></div>
+        <div class="crop-coord-field"><label>Y</label><input type="number" id="cropY" min="0" /></div>
+        <div class="crop-coord-field"><label>W</label><input type="number" id="cropW" min="1" /></div>
+        <div class="crop-coord-field"><label>H</label><input type="number" id="cropH" min="1" /></div>
+        <button class="btn btn-xs btn-ghost" id="cropResetBtn" title="Selecionar tudo">↺ Limpar</button>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary" id="cropCancelBtn">Cancelar</button>
+        <button class="btn btn-primary" id="cropApplyBtn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+          Aplicar Recorte
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="modal-overlay" id="progressModal">
+    <div class="modal" style="max-width:380px">
+      <div class="modal-head">
+        <h3>Processando…</h3>
+      </div>
+      <div class="modal-body">
+        <p class="prog-msg" id="progMsg">Preparando…</p>
+        <div class="prog-track">
+          <div class="prog-fill" id="progFill"></div>
+        </div>
+        <div class="prog-pct" id="progPct">0%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULT: multi -->
+  <div class="modal-overlay" id="resultMultiModal">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="resMultiTitle">Arquivos prontos!</h3>
+        <button class="modal-x" id="resTopCloseBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.5">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg></button>
+      </div>
+      <div class="modal-body">
+        <div style="text-align:center">
+          <div class="ok-icon green" style="margin:0 auto 10px"><svg width="20" height="20" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="20 6 9 17 4 12" />
+            </svg></div>
+          <p class="ok-msg" id="resMultiMsg"></p>
+        </div>
+        <ul class="result-list" id="resMultiList"></ul>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-secondary" id="resCloseBtn">Fechar</button>
+        <button class="btn btn-green" id="dlZipBtn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          Baixar todos (.zip)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <!-- Scripts do Projeto -->
+  <script src="js/state.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/pdf-ops.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+
+</html>
