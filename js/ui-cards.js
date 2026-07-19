@@ -1,3 +1,21 @@
+let _thumbObserver = null;
+function getThumbObserver() {
+  if (!_thumbObserver) {
+    _thumbObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        const card = entry.target;
+        const id = card.dataset.id;
+        const page = pagePool.get(id);
+        if (!page || page.thumbCanvas) return;
+        renderThumb(page, card.querySelector('.card-thumb'));
+        _thumbObserver.unobserve(card);
+      });
+    }, { rootMargin: '200px' });
+  }
+  return _thumbObserver;
+}
+
 function renderGrid() {
   const grid = document.getElementById('pagesGrid');
   grid.innerHTML = '';
@@ -14,11 +32,15 @@ function renderGrid() {
     if (btn) btn.addEventListener('click', () => document.getElementById('addMoreInput').click());
     updateUI(); return;
   }
+  const obs = getThumbObserver();
   pages.forEach((page, idx) => {
     const card = currentViewMode === 'list' ? buildListCard(page, idx) : buildCard(page);
     grid.appendChild(card);
-    if (!page.thumbCanvas) renderThumb(page, card.querySelector('.card-thumb'));
-    else mountThumb(page, card.querySelector('.card-thumb'));
+    if (page.thumbCanvas) {
+      mountThumb(page, card.querySelector('.card-thumb'));
+    } else {
+      obs.observe(card);
+    }
   });
   updateUI();
 }

@@ -231,7 +231,6 @@ async function addPageToPdfDoc(outDoc, page, comp) {
     copied.setRotation(PDFLib.degrees(norm(existRot + page.rotation)));
 
     outDoc.addPage(copied);
-    console.log(`[addPage] ${page.label}: COPY (vetorial) — ${page.type} ${Math.round(page.origW)}x${Math.round(page.origH)}`);
     return;
   }
 
@@ -240,8 +239,6 @@ async function addPageToPdfDoc(outDoc, page, comp) {
 
   const blob = await new Promise(r => cv.toBlob(r, conf.mime, conf.quality));
   if (!blob) throw new Error('toBlob falhou');
-
-  console.log(`[addPage] ${page.label}: RASTER ${conf.mime} q${conf.quality} @${conf.max}px — canvas ${cv.width}x${cv.height} — blob ${(blob.size/1024).toFixed(1)} KB`);
 
   const buf = new Uint8Array(await blob.arrayBuffer());
 
@@ -268,7 +265,6 @@ async function doExport() {
 
   // 📊 estimativa
   const estimated = estimatePdfSize(target, comp);
-  console.log(`Tamanho estimado: ${estimated} MB`);
 
   const rawName = (document.getElementById('exportFilename').value || formatDefaultFilename()).replace(/[\\/:*?"<>|]/g, '_');
   const mode = document.getElementById('exportMode').value;
@@ -289,7 +285,6 @@ async function doExport() {
 
       const pdfBytes = await out.save();
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-      console.log(`[export] FINAL: ${(blob.size/1024).toFixed(1)} KB (${(blob.size/1024/1024).toFixed(2)} MB) — ${target.length} paginas, comp=${comp}`);
 
       closeModal('progressModal');
       triggerDlBlob(blob, rawName + '.pdf');
