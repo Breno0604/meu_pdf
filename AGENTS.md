@@ -6,7 +6,7 @@ Single-page vanilla JS PDF/image editor. No framework, no build system, no packa
 
 - **Entrypoint**: `index.html`
 - **Styles**: `style.css` (root)
-- **Scripts** (in order): `js/state.js` → `js/ui.js` → `js/pdf-ops.js` → `js/app.js`
+- **Scripts** (in order): `js/state.js` → `js/ui-core.js` → `js/ui-cards.js` → `js/ui-lightbox.js` → `js/pdf-ops.js` → `js/app.js`
 - All functions use global scope (no ES modules). Keep new code in the same style.
 
 ## Dependencies

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Tests — PDF Editor</title>
+  <style>
+    body { font-family: 'JetBrains Mono', monospace; background: #0b1020; color: #f8fafc; padding: 32px; max-width: 700px; margin: auto; }
+    h1 { color: #94a3b8; font-size: 16px; margin-bottom: 24px; }
+    .group { margin-bottom: 20px; }
+    .group h2 { font-size: 13px; color: #4f8cff; margin: 0 0 8px; }
+    .case { font-size: 12px; padding: 4px 0; display: flex; gap: 8px; }
+    .case.pass { color: #2dd4bf; }
+    .case.pass::before { content: '✓'; }
+    .case.fail { color: #fb7185; }
+    .case.fail::before { content: '✗'; }
+    .case .msg { color: #94a3b8; margin-left: auto; font-size: 11px; }
+    #summary { margin-top: 24px; padding: 12px 16px; border-radius: 10px; font-size: 14px; }
+    #summary.pass { background: rgba(45,212,191,.12); color: #2dd4bf; }
+    #summary.fail { background: rgba(251,113,133,.12); color: #fb7185; }
+  </style>
+</head>
+<body>
+  <h1>Tests — state.js</h1>
+  <div id="output"></div>
+  <div id="summary"></div>
+
+  <script>
+    var pdfjsLib = { GlobalWorkerOptions: {} };
+  </script>
+  <script src="../js/state.js"></script>
+  <script>
+    var results = [];
+    var passed = 0;
+    var failed = 0;
+
+    function assert(condition, name, detail) {
+      var ok = !!condition;
+      results.push({ ok: ok, name: name, detail: detail || '' });
+      ok ? passed++ : failed++;
+    }
+
+    function group(title) {
+      var el = document.createElement('div');
+      el.className = 'group';
+      el.innerHTML = '<h2>' + title + '</h2>';
+      document.getElementById('output').appendChild(el);
+      return el;
+    }
+
+    function addCase(ok, name, detail) {
+      var el = document.createElement('div');
+      el.className = 'case ' + (ok ? 'pass' : 'fail');
+      el.textContent = (ok ? '' : '') + name;
+      if (detail) {
+        var s = document.createElement('span');
+        s.className = 'msg';
+        s.textContent = detail;
+        el.appendChild(s);
+      }
+      document.getElementById('output').lastChild.appendChild(el);
+    }
+
+    function test(name, fn) {
+      try {
+        var prevLength = results.length;
+        fn();
+        for (var i = prevLength; i < results.length; i++) {
+          addCase(results[i].ok, results[i].name, results[i].detail);
+        }
+      } catch (e) {
+        assert(false, name, e.message);
+        addCase(false, name, e.message);
+      }
+    }
+
+    // ════ norm ════
+    var g = group('norm()');
+    test('norm(0) = 0', function() { assert(norm(0) === 0, 'norm(0)', norm(0)); });
+    test('norm(90) = 90', function() { assert(norm(90) === 90, 'norm(90)', norm(90)); });
+    test('norm(-90) = 270', function() { assert(norm(-90) === 270, 'norm(-90)', norm(-90)); });
+    test('norm(450) = 90', function() { assert(norm(450) === 90, 'norm(450)', norm(450)); });
+    test('norm(-450) = 270', function() { assert(norm(-450) === 270, 'norm(-450)', norm(-450)); });
+
+    // ════ clamp ════
+    g = group('clamp()');
+    test('clamp(5, 0, 10) = 5', function() { assert(clamp(5, 0, 10) === 5, 'clamp(5,0,10)', clamp(5,0,10)); });
+    test('clamp(-1, 0, 10) = 0', function() { assert(clamp(-1, 0, 10) === 0, 'clamp(-1,0,10)', clamp(-1,0,10)); });
+    test('clamp(15, 0, 10) = 10', function() { assert(clamp(15, 0, 10) === 10, 'clamp(15,0,10)', clamp(15,0,10)); });
+
+    // ════ stripExt ════
+    g = group('stripExt()');
+    test('stripExt("foto.jpg") = "foto"', function() { assert(stripExt('foto.jpg') === 'foto', 'stripExt(foto.jpg)', stripExt('foto.jpg')); });
+    test('stripExt("doc.pdf") = "doc"', function() { assert(stripExt('doc.pdf') === 'doc', 'stripExt(doc.pdf)', stripExt('doc.pdf')); });
+    test('stripExt("semextensao") = "semextensao"', function() { assert(stripExt('semextensao') === 'semextensao', 'stripExt(semext)', stripExt('semextensao')); });
+    test('stripExt("a.b.c.txt") = "a.b.c"', function() { assert(stripExt('a.b.c.txt') === 'a.b.c', 'stripExt(a.b.c.txt)', stripExt('a.b.c.txt')); });
+
+    // ════ formatBytes ════
+    g = group('formatBytes()');
+    test('formatBytes(0) = "0 B"', function() { assert(formatBytes(0) === '0 B', 'formatBytes(0)', formatBytes(0)); });
+    test('formatBytes(500) = "500 B"', function() { assert(formatBytes(500) === '500 B', 'formatBytes(500)', formatBytes(500)); });
+    test('formatBytes(1536) = "1.5 KB"', function() { assert(formatBytes(1536) === '1.5 KB', 'formatBytes(1536)', formatBytes(1536)); });
+    test('formatBytes(1048576) = "1 MB"', function() { assert(formatBytes(1048576) === '1 MB', 'formatBytes(1MB)', formatBytes(1048576)); });
+
+    // ════ calcPageSize ════
+    g = group('calcPageSize()');
+    var mockPage = function(opts) { return Object.assign({ customW: null, customH: null, crop: null, type: 'image' }, opts); };
+
+    var pImg2k = mockPage({ origW: 2000, origH: 1500 });
+    test('calcPageSize(2k img, extreme)', function() {
+      var sz = calcPageSize(pImg2k, 'extreme');
+      assert(sz > 0 && sz < 900 * 900, 'extreme ' + Math.round(sz) + ' bytes', '2k img -> extreme');
+    });
+    test('calcPageSize(2k img, high)', function() {
+      var sz = calcPageSize(pImg2k, 'high');
+      assert(sz > 0, 'high ' + Math.round(sz) + ' bytes', '2k img -> high');
+    });
+
+    var pPDF = mockPage({ type: 'pdf', origW: 595, origH: 842 });
+    test('calcPageSize(A4 PDF, original)', function() {
+      var sz = calcPageSize(pPDF, 'original');
+      assert(sz > 0, 'original ' + Math.round(sz) + ' bytes', 'A4 PDF -> original');
+    });
+    test('calcPageSize(A4 PDF, extreme)', function() {
+      var sz = calcPageSize(pPDF, 'extreme');
+      assert(sz > 0, 'extreme ' + Math.round(sz) + ' bytes', 'A4 PDF -> extreme');
+    });
+
+    // ════ snapshotPages + restoreSnapshot ════
+    g = group('snapshotPages() / restoreSnapshot()');
+    test('roundtrip preserves data', function() {
+      pagePool.clear();
+      pages.length = 0;
+      var p1 = { id: 101, rotation: 90, customW: 800, customH: 600, crop: { x: 0.1, y: 0.2, w: 0.8, h: 0.6 }, origW: 1600, origH: 1200, label: 'test.png', type: 'image', thumbCanvas: null };
+      var p2 = { id: 102, rotation: 0, customW: null, customH: null, crop: null, origW: 800, origH: 600, label: 'test2.png', type: 'image', thumbCanvas: null };
+      pagePool.set(101, p1);
+      pagePool.set(102, p2);
+      pages = [p1, p2];
+
+      var snap = snapshotPages();
+      assert(snap.ids.length === 2, 'snapshot has 2 ids', 'ids: ' + snap.ids.join(','));
+      assert(snap.meta[101].rotation === 90, 'rotation preserved', 'rot: ' + snap.meta[101].rotation);
+      assert(snap.meta[101].crop !== null, 'crop preserved', 'crop: ' + JSON.stringify(snap.meta[101].crop));
+
+      // mutate
+      p1.rotation = 180;
+      p2.customW = 500;
+      restoreSnapshot(snap);
+
+      assert(p1.rotation === 90, 'rotation restored', 'rot: ' + p1.rotation);
+      assert(p2.customW === null, 'customW restored', 'customW: ' + p2.customW);
+    });
+
+    // ════ SUMMARY ════
+    var sum = document.getElementById('summary');
+    if (failed === 0) {
+      sum.className = 'pass';
+      sum.textContent = 'All ' + passed + ' tests passed';
+    } else {
+      sum.className = 'fail';
+      sum.textContent = passed + ' passed, ' + failed + ' FAILED';
+    }
+  </script>
+</body>
+</html>
