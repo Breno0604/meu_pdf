@@ -1,15 +1,36 @@
-// ================= UTILS =================
-function estimatePdfSize(pages, comp) {
-  let total = 0;
-  for (const p of pages) total += calcPageSize(p, comp);
-  return (total / (1024 * 1024)).toFixed(2);
-}
+// ================= CONFIG =================
+const COMP_CONFIG = {
+  original: { max: 3000, quality: 0.92, mime: 'image/jpeg' },
+  basic: { max: 1900, quality: 0.85, mime: 'image/jpeg' },
+  medium: { max: 1500, quality: 0.75, mime: 'image/jpeg' },
+  high: { max: 1200, quality: 0.60, mime: 'image/jpeg' },
+  extreme: { max: 900, quality: 0.40, mime: 'image/jpeg' }
+};
 
+// ================= UTILS =================
 async function processInBatches(items, batchSize, fn) {
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
     await Promise.all(batch.map(fn));
   }
+}
+
+function estimatePdfSize(pages, comp) {
+  const conf = COMP_CONFIG[comp] || COMP_CONFIG.medium;
+  let total = 0;
+
+  for (const p of pages) {
+    const w = p.customW || p.origW;
+    const h = p.customH || p.origH;
+
+    const scale = Math.min(1, conf.max / Math.max(w, h));
+    const pixels = (w * scale) * (h * scale);
+
+    const factor = conf.mime === 'image/png' ? 0.7 : conf.quality * 0.5;
+    total += pixels * factor;
+  }
+
+  return (total / (1024 * 1024)).toFixed(2); // MB
 }
 
 // ================= LOAD =================
@@ -210,6 +231,7 @@ async function addPageToPdfDoc(outDoc, page, comp) {
     copied.setRotation(PDFLib.degrees(norm(existRot + page.rotation)));
 
     outDoc.addPage(copied);
+    console.log(`[addPage] ${page.label}: COPY (vetorial) — ${page.type} ${Math.round(page.origW)}x${Math.round(page.origH)}`);
     return;
   }
 
@@ -218,6 +240,8 @@ async function addPageToPdfDoc(outDoc, page, comp) {
 
   const blob = await new Promise(r => cv.toBlob(r, conf.mime, conf.quality));
   if (!blob) throw new Error('toBlob falhou');
+
+  console.log(`[addPage] ${page.label}: RASTER ${conf.mime} q${conf.quality} @${conf.max}px — canvas ${cv.width}x${cv.height} — blob ${(blob.size/1024).toFixed(1)} KB`);
 
   const buf = new Uint8Array(await blob.arrayBuffer());
 
@@ -265,6 +289,7 @@ async function doExport() {
 
       const pdfBytes = await out.save();
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      console.log(`[export] FINAL: ${(blob.size/1024).toFixed(1)} KB (${(blob.size/1024/1024).toFixed(2)} MB) — ${target.length} paginas, comp=${comp}`);
 
       closeModal('progressModal');
       triggerDlBlob(blob, rawName + '.pdf');

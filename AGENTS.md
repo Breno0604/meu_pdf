@@ -17,9 +17,16 @@ All loaded via CDN in `index.html` — do **not** add npm packages or node modul
 - JSZip 3.10.1
 - Google Fonts (Plus Jakarta Sans, JetBrains Mono)
 
-## Commands
+## Running Locally
 
-No build, lint, test, or typecheck commands. Open `index.html` in a browser to verify changes.
+**Do NOT double-click `index.html`** — `file://` protocol breaks JPEG compression (`canvas.toBlob` ignores quality). Always serve via localhost:
+
+```
+python -m http.server 8080
+```
+Then open `http://localhost:8080`.
+
+The app auto-detects `file://` and shows a warning banner.
 
 ## Script Load Order
 

@@ -20,7 +20,7 @@ let uid = 0, pdfSources = [], pagePool = new Map(), pages = [], selIds = new Set
 let lbIdx = 0, dragId = null, lastSelectedId = null;
 let historyStack = [], redoStack = [];
 let exportFmt = 'pdf';
-let exportComp = 'original';
+let exportComp = 'medium';
 let multiResults = [];
 let isDark = true;
 let currentViewMode = 'grid';
@@ -84,23 +84,30 @@ function updateUndoUI() {
   document.getElementById('redoBtn').disabled = redoStack.length === 0;
 }
 
-/* ════ COMPRESSION CONFIG ════ */
-const COMP_CONFIG = {
-  original: { max: 3000, quality: 0.96, mime: 'image/png',  byteFactor: 0.50 },
-  basic:    { max: 1900, quality: 0.92, mime: 'image/jpeg', byteFactor: 0.20 },
-  medium:   { max: 1500, quality: 0.80, mime: 'image/jpeg', byteFactor: 0.15 },
-  high:     { max: 1200, quality: 0.75, mime: 'image/jpeg', byteFactor: 0.12 },
-  extreme:  { max: 900,  quality: 0.65, mime: 'image/jpeg', byteFactor: 0.08 }
-};
-
 /* ════ CÁLCULO DE TAMANHO ════ */
 function calcPageSize(page, comp) {
   const baseW = page.customW || page.origW;
   const baseH = page.customH || page.origH;
-  const conf = COMP_CONFIG[comp] || COMP_CONFIG.medium;
+  let scale = 1;
 
-  const scale = Math.min(1, conf.max / Math.max(baseW, baseH));
+  if (comp === 'medium') scale = Math.min(1, 1920 / Math.max(baseW, baseH));
+  if (comp === 'high') scale = Math.min(1, 1500 / Math.max(baseW, baseH));
+  if (comp === 'extreme') scale = Math.min(1, 1200 / Math.max(baseW, baseH));
+
   const rW = baseW * scale, rH = baseH * scale;
+  const pixels = rW * rH;
 
-  return rW * rH * conf.byteFactor;
+  if (comp === 'original' && page.type === 'pdf' && !page.crop && !page.customW) {
+    return (baseW * baseH * 0.5);
+  } else if (comp === 'extreme') {
+    return pixels * 0.08;
+  } else if (comp === 'high') {
+    return pixels * 0.12;
+  } else if (comp === 'medium') {
+    return pixels * 0.15;
+  } else if (comp === 'basic') {
+    return pixels * 0.20;
+  } else {
+    return pixels * 0.25;
+  }
 }
